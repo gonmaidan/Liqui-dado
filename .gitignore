@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+liqui_dado.db
+_tmp_web/
+plantillas/
+datos/
+salidas/
