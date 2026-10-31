@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block titulo %}Coeficientes CM · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Coeficientes unificados — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Son los de la CM05 anual (promedio del coeficiente de ingresos y el de gastos, 4 decimales; suman 1,0000). Cada conjunto rige desde el período que indiques: normalmente los nuevos se usan desde abril, y de enero a marzo siguen los del año anterior.</p>
+
+{% if conjuntos %}
+<div class="tarjeta" style="margin-bottom:20px;">
+  <h2>Cargados</h2>
+  <div class="tabla-scroll"><table>
+    <thead><tr><th>Vigente desde</th>{% for j in habilitadas %}<th>{{ j }}</th>{% endfor %}<th></th></tr></thead>
+    <tbody>
+    {% for vig, c in conjuntos %}
+      <tr><td class="num">{{ vig }}</td>
+        {% for j in habilitadas %}<td class="num">{{ ("%.4f"|format(c[j])) if j in c else "—" }}</td>{% endfor %}
+        <td><form method="POST" action="{{ url_for('cm.coeficientes_eliminar', cliente_id=cliente.id, vigencia=vig) }}" onsubmit="return confirm('¿Eliminar este conjunto de coeficientes?');"><button class="chico peligro" type="submit">Eliminar</button></form></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</div>
+{% endif %}
+
+<form method="POST" class="tarjeta">
+  <h2>Agregar o reemplazar un conjunto</h2>
+  {% if not habilitadas %}<p>Primero configurá las jurisdicciones.</p>{% else %}
+  <div class="fila-form"><div style="max-width:240px;"><label>Vigente desde (AAAA-MM)</label><input type="text" name="vigencia_desde" pattern="\d{4}-\d{2}" placeholder="2026-04" required></div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px 18px;margin-bottom:12px;">
+    {% for j in habilitadas %}
+    <div><label>{{ j }}</label><input type="text" name="coef_{{ j }}" value="{{ '%.4f'|format(ultimo[j]) if j in ultimo else '' }}" placeholder="0,0000"></div>
+    {% endfor %}
+  </div>
+  <p class="subtitulo">Se precarga con el último conjunto para que solo cambies lo necesario. Los que dejes vacíos o en 0 no cuentan. Si ya existe un conjunto con esa vigencia, se reemplaza.</p>
+  <button type="submit">Guardar conjunto</button>
+  {% endif %}
+  <a class="boton secundario" href="{{ url_for('cm.inicio', cliente_id=cliente.id) }}">Volver</a>
+</form>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block titulo %}Configurar CM · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Configuración de Convenio Multilateral — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Las alícuotas y los mínimos son los que fija cada jurisdicción para la actividad del cliente: la app no los inventa, los cargás vos (si no sabés uno, dejalo vacío y la liquidación te avisa).</p>
+<form method="POST">
+  <div class="tarjeta" style="margin-bottom:20px;">
+    <h2>Jurisdicciones donde tributa</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px 18px;">
+      {% for j in todas %}
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="checkbox" name="jur_{{ j }}" value="1" style="width:auto;margin:0;" {{ "checked" if j in elegidas }}>
+        <span style="flex:1;">{{ j }}</span>
+        <input type="number" step="0.01" min="0" name="min_{{ j }}" value="{{ elegidas.get(j, '') if j in elegidas and elegidas[j] else '' }}" placeholder="Mínimo $" style="width:110px;">
+      </div>
+      {% endfor %}
+    </div>
+    <p class="subtitulo" style="margin:10px 0 0;">El mínimo es opcional: si el impuesto calculado da menos, se toma el mínimo de la jurisdicción. Al destildar una jurisdicción se borran sus alícuotas. Guardá para que aparezcan las columnas de alícuotas.</p>
+  </div>
+
+  <div class="tarjeta" style="margin-bottom:20px;">
+    <h2>Actividades y alícuotas (%)</h2>
+    {% if not jurs %}<p style="color:var(--texto-tenue)">Tildá y guardá primero las jurisdicciones.</p>{% else %}
+    <div class="tabla-scroll"><table>
+      <thead><tr><th>Actividad</th>{% for j in jurs %}<th>{{ j.jurisdiccion }}</th>{% endfor %}<th>Borrar</th></tr></thead>
+      <tbody>
+      {% for a in actividades %}
+        <tr>
+          <td><input type="text" name="nombre_{{ a.id }}" value="{{ a.nombre }}" maxlength="80" style="min-width:200px;"></td>
+          {% for j in jurs %}<td><input type="number" step="0.01" min="0" max="100" name="alic_{{ a.id }}_{{ j.jurisdiccion }}" value="{{ alic.get((a.id, j.jurisdiccion), '') }}" style="width:90px;"></td>{% endfor %}
+          <td><input type="checkbox" name="borrar_{{ a.id }}" value="1" style="width:auto;"></td>
+        </tr>
+      {% endfor %}
+        <tr>
+          <td><input type="text" name="nueva_nombre" maxlength="80" placeholder="+ Nueva actividad" style="min-width:200px;"></td>
+          {% for j in jurs %}<td><input type="number" step="0.01" min="0" max="100" name="alic_nueva_{{ j.jurisdiccion }}" style="width:90px;"></td>{% endfor %}
+          <td></td>
+        </tr>
+      </tbody>
+    </table></div>
+    <p class="subtitulo" style="margin:10px 0 0;">Para agregar otra actividad, completá la fila de abajo y guardá; aparece una fila nueva.</p>
+    {% endif %}
+  </div>
+  <button type="submit">Guardar</button>
+  <a class="boton secundario" href="{{ url_for('cm.inicio', cliente_id=cliente.id) }}">Volver</a>
+</form>
+{% endblock %}

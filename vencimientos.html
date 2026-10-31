@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block titulo %}Próximos vencimientos · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Próximos vencimientos — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">
+  CUIT <span class="num">{{ cliente.cuit }}</span> (terminación
+  <strong>{{ cliente.cuit[-1:] }}</strong>). Si ARCA corrió una fecha, podés cambiarla:
+  el cambio es solo de tu estudio y vale para todos tus clientes a los que les
+  aplica ese vencimiento.
+</p>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <form method="GET" action="{{ url_for('vencimientos.listado', cliente_id=cliente.id) }}" class="fila-form" style="margin-bottom:0;">
+    <div>
+      <label for="mes">Filtrar por mes</label>
+      <input type="month" id="mes" name="mes" value="{{ mes }}">
+    </div>
+    <div style="flex:0;"><button type="submit">Filtrar</button></div>
+    {% if mes %}
+    <div style="flex:0;">
+      <a class="boton secundario" href="{{ url_for('vencimientos.listado', cliente_id=cliente.id) }}">Ver próximos</a>
+    </div>
+    {% endif %}
+    <div style="flex:0;">
+      <a class="boton secundario" href="{{ url_for('clientes.obligaciones_cliente', cliente_id=cliente.id) }}">Cambiar obligaciones</a>
+      <a class="boton secundario" href="{{ url_for('clientes.listar') }}">Volver a clientes</a>
+    </div>
+  </form>
+</div>
+
+<div class="tarjeta">
+  <h2>{{ "Vencimientos de " + mes if mes else "Próximos vencimientos" }}</h2>
+  {% if sin_obligaciones %}
+  <p style="color:var(--ambar)">Este cliente no tiene obligaciones tildadas, por eso no se muestra ningún vencimiento.
+    <a href="{{ url_for('clientes.obligaciones_cliente', cliente_id=cliente.id) }}">Elegir obligaciones</a></p>
+  {% elif base_vacia %}
+  <p style="color:var(--texto-tenue)">Todavía no hay un calendario cargado. Pedile al administrador de la plataforma que lo cargue.</p>
+  {% endif %}
+  <div class="tabla-scroll">
+  <table>
+    <thead>
+      <tr><th>Fecha</th><th>Falta</th><th>Impuesto</th><th>Terminación CUIT</th><th>Cambiar fecha</th></tr>
+    </thead>
+    <tbody>
+      {% for f in filas %}
+      <tr>
+        <td class="num">{{ f.fecha.strftime("%d/%m/%Y") }}<br><span style="color:var(--texto-tenue);font-size:12px;">{{ f.dia_semana }}</span></td>
+        <td class="num">
+          {% if f.dias < 0 %}<span style="color:var(--texto-tenue)">venció</span>
+          {% elif f.dias == 0 %}<strong style="color:var(--rojo)">hoy</strong>
+          {% elif f.dias <= 5 %}<strong style="color:var(--ambar)">{{ f.dias }} d</strong>
+          {% else %}{{ f.dias }} d{% endif %}
+        </td>
+        <td>
+          {{ f.v.impuesto }}
+          {% if f.ajuste %}
+            <br><span class="pill suspendido">Modificado por tu estudio</span>
+            <span style="color:var(--texto-tenue);font-size:12px;">(original {{ f.v.fecha.strftime("%d/%m/%Y") }}){% if f.ajuste.nota %} — {{ f.ajuste.nota }}{% endif %}</span>
+          {% endif %}
+        </td>
+        <td class="num">{{ f.v.terminaciones_texto }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('vencimientos.ajustar', cliente_id=cliente.id, vencimiento_id=f.v.id) }}" style="display:flex;gap:6px;flex-wrap:wrap;">
+            <input type="hidden" name="mes" value="{{ mes }}">
+            <input type="date" name="fecha_nueva" value="{{ f.fecha.strftime('%Y-%m-%d') }}" required style="max-width:150px;">
+            <input type="text" name="nota" value="{{ f.ajuste.nota if f.ajuste and f.ajuste.nota else '' }}" placeholder="Motivo (opcional)" maxlength="200" style="max-width:180px;">
+            <button type="submit" class="chico secundario">Guardar</button>
+          </form>
+          {% if f.ajuste %}
+          <form method="POST" action="{{ url_for('vencimientos.restaurar', cliente_id=cliente.id, vencimiento_id=f.v.id) }}" style="margin-top:4px;">
+            <input type="hidden" name="mes" value="{{ mes }}">
+            <button type="submit" class="chico secundario">Restaurar original</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:var(--texto-tenue)">No hay vencimientos {{ "en ese mes" if mes else "próximos" }} para este CUIT.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}
