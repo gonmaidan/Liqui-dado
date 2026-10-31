@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block titulo %}Comprobantes escaneados · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Comprobantes cargados — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">
+  Estos comprobantes se suman a los de cualquier Excel que subas para el
+  mismo período al generar la liquidación.
+</p>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <a class="boton" href="{{ url_for('escaner.escanear', cliente_id=cliente.id) }}">Escanear otra factura</a>
+  <a class="boton secundario" href="{{ url_for('elegir_impuesto', cliente_id=cliente.id) }}">Ir a liquidar</a>
+  {% if comprobantes %}
+  <a class="boton secundario" href="{{ url_for('escaner.exportar', cliente_id=cliente.id, tipo='venta', periodo=periodo) }}">Descargar ventas (Excel){{ " " + periodo if periodo else "" }}</a>
+  <a class="boton secundario" href="{{ url_for('escaner.exportar', cliente_id=cliente.id, tipo='compra', periodo=periodo) }}">Descargar compras (Excel){{ " " + periodo if periodo else "" }}</a>
+  {% endif %}
+</div>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <form method="GET" action="{{ url_for('escaner.listado', cliente_id=cliente.id) }}" class="fila-form" style="margin-bottom:0;">
+    <div>
+      <label for="periodo-filtro">Filtrar por período (AAAA-MM)</label>
+      <input type="text" id="periodo-filtro" name="periodo" value="{{ periodo }}" placeholder="2026-08" pattern="\d{4}-\d{2}">
+    </div>
+    <div style="flex:0;">
+      <button type="submit">Filtrar</button>
+    </div>
+    {% if periodo %}
+    <div style="flex:0;">
+      <a class="boton secundario" href="{{ url_for('escaner.listado', cliente_id=cliente.id) }}">Ver todos</a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<div class="tarjeta">
+  <h2>{{ "Período " + periodo if periodo else "Todos los períodos" }}</h2>
+  <div class="tabla-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Período</th><th>Tipo</th><th>Fecha</th><th>Comprobante</th>
+        <th>CUIT</th><th>Razón social</th><th>Neto</th><th>IVA</th><th>Percep.</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in comprobantes %}
+      <tr>
+        <td class="num">{{ c.periodo }}</td>
+        <td>{{ "Venta" if c.tipo == "venta" else "Compra" }}</td>
+        <td class="num">{{ c.fecha.strftime("%d/%m/%Y") }}</td>
+        <td>{{ c.tipo_comprobante }} <span class="num">{{ "%05d"|format(c.punto_venta) }}-{{ "%08d"|format(c.numero_comprobante) }}</span></td>
+        <td class="num">{{ c.cuit }}</td>
+        <td>{{ c.razon_social }}</td>
+        <td class="num">{{ "%.2f"|format(c.neto_gravado) }}</td>
+        <td class="num">{{ "%.2f"|format(c.iva) }}</td>
+        <td class="num">
+          {% if c.percepcion_iva %}IVA ${{ "%.2f"|format(c.percepcion_iva) }}{% endif %}
+          {% if c.percepcion_iibb %}
+            {% if c.percepciones_iibb %}
+              {% for p in c.percepciones_iibb %}
+                <div>IIBB {{ p.jurisdiccion or "s/d" }}: ${{ "%.2f"|format(p.importe) }}</div>
+              {% endfor %}
+            {% else %}
+              <div>IIBB ${{ "%.2f"|format(c.percepcion_iibb) }}{{ " (" + c.jurisdiccion_iibb + ")" if c.jurisdiccion_iibb else "" }}</div>
+            {% endif %}
+          {% endif %}
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('escaner.eliminar', cliente_id=cliente.id, comprobante_id=c.id) }}"
+                onsubmit="return confirm('¿Eliminar este comprobante?');">
+            <button type="submit" class="chico peligro">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" style="color:var(--texto-tenue)">Todavía no cargaste ningún comprobante escaneado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

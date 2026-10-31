@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titulo %}Mis clientes · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Mis clientes</h1>
+<p class="subtitulo">Solo vos ves esta lista — ningún otro estudio tiene acceso a ella.</p>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <h2>Agregar cliente</h2>
+  <form method="POST" action="{{ url_for('clientes.crear') }}">
+    <div class="fila-form">
+      <div>
+        <label for="cuit">CUIT</label>
+        <input type="text" id="cuit" name="cuit" class="num" placeholder="20304050607" required>
+      </div>
+      <div style="flex:2;">
+        <label for="razon_social">Razón social</label>
+        <input type="text" id="razon_social" name="razon_social" placeholder="Nombre o razón social" required>
+      </div>
+    </div>
+    {% with tipo_actual="fisica", tildadas=[] %}
+      {% include "_obligaciones_campos.html" %}
+    {% endwith %}
+    <button type="submit">Agregar cliente</button>
+  </form>
+</div>
+
+<div class="tarjeta">
+  <h2>Clientes cargados</h2>
+  <div class="tabla-scroll">
+  <table>
+    <thead>
+      <tr><th>Razón social</th><th>CUIT</th><th>Tipo</th><th></th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for cliente in clientes %}
+      <tr>
+        <td>{{ cliente.razon_social }}</td>
+        <td class="num">{{ cliente.cuit }}</td>
+        <td>{{ tipos_persona[cliente.tipo_persona] }}<br><span style="color:var(--texto-tenue);font-size:12px;">{{ cliente.obligaciones|length }} obligación(es)</span></td>
+        <td>
+          <a class="boton secundario chico" href="{{ url_for('escaner.escanear', cliente_id=cliente.id) }}">Escanear factura</a>
+          <a class="boton secundario chico" href="{{ url_for('escaner.listado', cliente_id=cliente.id) }}">Ver cargadas</a>
+          <a class="boton secundario chico" href="{{ url_for('vencimientos.listado', cliente_id=cliente.id) }}">Vencimientos</a>
+          <a class="boton secundario chico" href="{{ url_for('clientes.obligaciones_cliente', cliente_id=cliente.id) }}">Obligaciones</a>
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('clientes.eliminar', cliente_id=cliente.id) }}"
+                onsubmit="return confirm('¿Eliminar {{ cliente.razon_social }} y su historial de liquidaciones?');">
+            <button type="submit" class="chico peligro">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:var(--texto-tenue)">Todavía no cargaste ningún cliente.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

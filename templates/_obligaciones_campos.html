@@ -1,0 +1,39 @@
+{# Campos de tipo de persona + obligaciones. Variables: tipos_persona, obligaciones, tipo_actual, tildadas #}
+<div class="fila-form">
+  <div style="max-width:260px;">
+    <label for="tipo_persona">Tipo de persona</label>
+    <select id="tipo_persona" name="tipo_persona">
+      {% for clave, nombre in tipos_persona.items() %}
+      <option value="{{ clave }}" {{ "selected" if clave == tipo_actual else "" }}>{{ nombre }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+<label>Obligaciones que vas a trabajar para este cliente</label>
+<div class="obligaciones-lista" style="display:flex;flex-wrap:wrap;gap:6px 22px;margin:6px 0 12px;">
+  {% for clave, nombre, aplica in obligaciones %}
+  <label class="obl" data-aplica="{{ aplica }}" style="display:flex;align-items:center;gap:6px;font-weight:400;margin:0;">
+    <input type="checkbox" name="obligaciones" value="{{ clave }}" style="width:auto;margin:0;"
+           {{ "checked" if clave in tildadas else "" }}>
+    {{ nombre }}
+  </label>
+  {% endfor %}
+</div>
+<script>
+  (function () {
+    var select = document.currentScript.parentNode.querySelector('#tipo_persona') ||
+                 document.querySelector('#tipo_persona');
+    var form = select.closest('form');
+    function aplicar() {
+      var tipo = select.value;
+      form.querySelectorAll('.obl').forEach(function (l) {
+        var aplica = l.getAttribute('data-aplica');
+        var visible = aplica === 'ambas' || aplica === tipo;
+        l.style.display = visible ? 'flex' : 'none';
+        if (!visible) l.querySelector('input').checked = false;
+      });
+    }
+    select.addEventListener('change', aplicar);
+    aplicar();
+  })();
+</script>

@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block titulo %}Confirmar comprobantes · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<style>
+  .fila-iibb { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+  .fila-iibb input[type=text] { flex: 2; min-width: 0; }
+  .fila-iibb input[type=number] { flex: 1; min-width: 0; }
+  .fila-iibb button { margin-top: 0; }
+  .banner { border-color: var(--rojo); margin-bottom: 14px; }
+  .banner p { color: var(--rojo); margin: 0; }
+  .banner-ok { border-color: #2e7d32; margin-bottom: 14px; }
+  .banner-ok p { color: #2e7d32; margin: 0; }
+</style>
+
+<h1>Revisá antes de guardar — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">
+  {{ items|length }} comprobante(s) para revisar. El neto gravado y el IVA se
+  leen del PDF cuando se puede (siempre verificando que cierren con el total del QR);
+  si no, se calculan a partir del importe total, la alícuota elegida y las percepciones
+  que pongas en cada uno (si no tiene, dejalas en 0).
+</p>
+
+{% if fallidos %}
+<div class="tarjeta banner">
+  <p><strong>No se cargaron {{ fallidos|length }} archivo(s):</strong></p>
+  <ul style="color:var(--rojo); margin:6px 0 0 18px;">
+    {% for nombre, motivo in fallidos %}<li>{{ nombre }} — {{ motivo }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('escaner.confirmar', cliente_id=cliente.id) }}">
+  {% for d in items %}
+  {% set p = "f" ~ loop.index0 ~ "_" %}
+  <input type="hidden" name="indices" value="{{ loop.index0 }}">
+  <div class="tarjeta" style="margin-bottom:20px;">
+    <h2>Comprobante {{ loop.index }} de {{ items|length }}{% if d.archivo %} <span style="color:var(--texto-tenue);font-weight:400;font-size:14px;">— {{ d.archivo }}</span>{% endif %}</h2>
+
+    {% if d.error %}
+    <div class="tarjeta banner"><p>⚠ {{ d.error }}</p></div>
+    {% elif d.advertencia %}
+    <div class="tarjeta banner"><p>⚠ {{ d.advertencia }}</p></div>
+    {% endif %}
+    {% if d.detectado %}
+    <div class="tarjeta banner-ok">
+      <p>✔ Leímos del PDF: neto ${{ "{:,.2f}".format(d.neto_detectado|float) }} · IVA ${{ "{:,.2f}".format(d.iva_detectado|float) }}
+      y las percepciones de abajo. Todo suma el total del QR{% if d.diferencia and d.diferencia|abs > 0.001 %} (con {{ "%.2f"|format(d.diferencia|abs) }} de diferencia por redondeo de la factura){% endif %}.
+      Verificalas contra la factura antes de guardar.</p>
+    </div>
+    {% endif %}
+
+    <input type="hidden" name="{{ p }}archivo" value="{{ d.archivo }}">
+    <input type="hidden" name="{{ p }}advertencia" value="{{ d.advertencia or '' }}">
+    <input type="hidden" name="{{ p }}tipo" value="{{ d.tipo }}">
+    <input type="hidden" name="{{ p }}alicuota" value="{{ d.alicuota }}">
+    <input type="hidden" name="{{ p }}importe_total" value="{{ d.importe_total }}">
+    <input type="hidden" name="{{ p }}detectado" value="{{ '1' if d.detectado else '' }}">
+    <input type="hidden" name="{{ p }}neto_detectado" value="{{ d.neto_detectado }}">
+    <input type="hidden" name="{{ p }}iva_detectado" value="{{ d.iva_detectado }}">
+    <input type="hidden" name="{{ p }}percep_ref" value="{{ d.percep_ref }}">
+
+    <div class="fila-form">
+      <div>
+        <label>Fecha</label>
+        <input type="date" name="{{ p }}fecha" value="{{ d.fecha }}" required>
+      </div>
+      <div>
+        <label>Período (AAAA-MM)</label>
+        <input type="text" name="{{ p }}periodo" value="{{ d.periodo }}" pattern="\d{4}-\d{2}" required>
+      </div>
+      <div>
+        <label>Tipo de comprobante</label>
+        <input type="text" name="{{ p }}tipo_comprobante" value="{{ d.tipo_comprobante }}" required>
+      </div>
+    </div>
+
+    <div class="fila-form">
+      <div>
+        <label>Punto de venta</label>
+        <input type="number" name="{{ p }}punto_venta" value="{{ d.punto_venta }}" required>
+      </div>
+      <div>
+        <label>Número</label>
+        <input type="number" name="{{ p }}numero_comprobante" value="{{ d.numero_comprobante }}" required>
+      </div>
+      <div>
+        <label>Alícuota / Importe total (QR)</label>
+        <div class="num" style="padding:10px 0;">{{ "%.1f"|format(d.alicuota|float) }}% · ${{ "%.2f"|format(d.importe_total|float) }}</div>
+      </div>
+    </div>
+
+    <div class="fila-form">
+      <div>
+        <label>CUIT de {{ "quien compró" if d.tipo == "venta" else "el proveedor" }}</label>
+        <input type="text" name="{{ p }}cuit" class="num cuit-campo" value="{{ d.cuit }}"
+               placeholder="{{ 'No vino en el QR: completalo a mano' if not d.cuit else '' }}" required>
+      </div>
+      <div style="flex:2;">
+        <label>Razón social</label>
+        <input type="text" name="{{ p }}razon_social" class="razon-campo" value="{{ d.razon_social }}"
+               placeholder="{{ 'Primera vez con este CUIT: escribila' if not d.razon_social else '' }}" required>
+      </div>
+    </div>
+
+    <div class="fila-form">
+      <div style="max-width:280px;">
+        <label>Percepción de IVA</label>
+        <input type="number" step="0.01" min="0" name="{{ p }}percepcion_iva" value="{{ d.percepcion_iva }}">
+      </div>
+    </div>
+
+    <label>Percepciones de IIBB — una por jurisdicción</label>
+    <div class="filas-iibb">
+      {% for fila in d.iibb %}
+      <div class="fila-iibb">
+        <input type="text" name="{{ p }}iibb_jurisdiccion" value="{{ fila.jurisdiccion }}" placeholder="Jurisdicción (ej: Buenos Aires)">
+        <input type="number" step="0.01" min="0" name="{{ p }}iibb_importe" value="{{ fila.importe }}" placeholder="Importe">
+        <button type="button" class="chico secundario quitar-iibb" title="Quitar esta fila">×</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="chico secundario agregar-iibb" style="margin-top:6px;">+ Agregar otra percepción de IIBB</button>
+  </div>
+  {% endfor %}
+
+  <div>
+    <button type="submit">Guardar {{ "todos" if items|length > 1 else "" }}</button>
+    <a class="boton secundario" href="{{ url_for('escaner.escanear', cliente_id=cliente.id) }}">Cancelar</a>
+  </div>
+</form>
+
+<script>
+  (function () {
+    // Agregar / quitar renglones de IIBB dentro de cada comprobante.
+    document.querySelectorAll('.agregar-iibb').forEach(function (boton) {
+      boton.addEventListener('click', function () {
+        var contenedor = boton.previousElementSibling;
+        var nueva = contenedor.children[0].cloneNode(true);
+        nueva.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+        contenedor.appendChild(nueva);
+        nueva.querySelector('input').focus();
+      });
+    });
+    document.querySelectorAll('.filas-iibb').forEach(function (contenedor) {
+      contenedor.addEventListener('click', function (e) {
+        if (!e.target.classList.contains('quitar-iibb')) return;
+        var fila = e.target.closest('.fila-iibb');
+        if (contenedor.children.length > 1) fila.remove();
+        else fila.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+      });
+    });
+
+    // Si se escribe una razón social y otro comprobante tiene el mismo CUIT
+    // con la razón social vacía, se la completa (así se tipea una sola vez).
+    var tarjetas = Array.prototype.slice.call(document.querySelectorAll('.tarjeta')).filter(function (t) {
+      return t.querySelector('.razon-campo');
+    });
+    tarjetas.forEach(function (tarjeta) {
+      tarjeta.querySelector('.razon-campo').addEventListener('change', function (e) {
+        var cuit = tarjeta.querySelector('.cuit-campo').value.trim();
+        var valor = e.target.value.trim();
+        if (!cuit || !valor) return;
+        tarjetas.forEach(function (otra) {
+          if (otra === tarjeta) return;
+          var campoRazon = otra.querySelector('.razon-campo');
+          if (otra.querySelector('.cuit-campo').value.trim() === cuit && !campoRazon.value.trim()) {
+            campoRazon.value = valor;
+          }
+        });
+      });
+    });
+  })();
+</script>
+{% endblock %}

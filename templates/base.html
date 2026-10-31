@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}app-liquidar{% endblock %}</title>
+<style>
+  :root {
+    --fondo: #0A0E1A;
+    --tarjeta: #131A2C;
+    --tarjeta-alt: #0E1424;
+    --borde: #232B42;
+    --texto: #E7EAF3;
+    --texto-suave: #8891AA;
+    --texto-tenue: #5A6483;
+    --ambar: #F0B429;
+    --ambar-texto: #1A1200;
+    --rojo: #E55A4C;
+    --verde: #6FCF97;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fondo);
+    color: var(--texto);
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .num { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--borde);
+  }
+  .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  .logo .li { color: var(--texto); }
+  .logo .qu { color: #4FA3E3; }
+  .logo .i  { color: var(--rojo); }
+  .logo .guion { color: var(--texto-suave); }
+  .logo .d1 { color: var(--verde); }
+  .logo .a  { color: #B37FEB; }
+  .logo .d2 { color: var(--ambar); }
+  .logo .o  { color: #4FA3E3; }
+
+  nav a, .sesion { color: var(--texto-suave); text-decoration: none; font-size: 14px; margin-left: 18px; }
+  nav a:hover { color: var(--texto); }
+
+  main { max-width: 760px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .tarjeta {
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 14px;
+    padding: 28px;
+  }
+
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 0 0 16px; color: var(--texto); }
+  p.subtitulo { color: var(--texto-suave); font-size: 14px; margin: 0 0 28px; }
+
+  label { display: block; font-size: 13px; color: var(--texto-suave); margin: 18px 0 6px; }
+  label:first-of-type { margin-top: 0; }
+
+  input[type=text], input[type=email], input[type=password], input[type=file], select {
+    width: 100%;
+    padding: 11px 12px;
+    background: var(--tarjeta-alt);
+    border: 1px solid var(--borde);
+    border-radius: 8px;
+    color: var(--texto);
+    font-size: 14px;
+    font-family: inherit;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--ambar);
+  }
+  input[type=file] { padding: 9px; }
+
+  button, .boton {
+    display: inline-block;
+    margin-top: 24px;
+    padding: 12px 20px;
+    background: var(--ambar);
+    color: var(--ambar-texto);
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  button:hover, .boton:hover { filter: brightness(1.08); }
+  button.secundario, .boton.secundario {
+    background: transparent;
+    color: var(--texto);
+    border: 1px solid var(--borde);
+  }
+  button.chico { padding: 6px 12px; font-size: 12px; margin-top: 0; }
+  button.peligro { background: transparent; color: var(--rojo); border: 1px solid var(--rojo); }
+
+  .flashes { list-style: none; padding: 0; margin: 0 0 20px; }
+  .flashes li {
+    background: #2A2410;
+    border: 1px solid #4A3E12;
+    color: var(--ambar);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    margin-bottom: 8px;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--borde); }
+  th { color: var(--texto-suave); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 600; }
+  .pill.activo { background: #16301F; color: var(--verde); }
+  .pill.suspendido { background: #3A1414; color: var(--rojo); }
+
+  .fila-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 24px; }
+  .fila-form > div { flex: 1; min-width: 160px; }
+  .fila-form label { margin-top: 0; }
+
+  footer { text-align: center; color: var(--texto-tenue); font-size: 12px; padding: 20px; }
+
+  .tabla-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  @media (max-width: 600px) {
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 14px 16px;
+    }
+    nav { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+    nav a, .sesion { margin-left: 0; }
+    main { padding: 24px 14px 60px; }
+    .tarjeta { padding: 18px; border-radius: 12px; }
+    h1 { font-size: 19px; }
+    .fila-form { flex-direction: column; align-items: stretch; gap: 0; }
+    .fila-form > div { min-width: 0; }
+    table { font-size: 13px; }
+    th, td { padding: 9px 6px; }
+    button, .boton { width: 100%; text-align: center; }
+    button.chico { width: auto; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">
+    <span class="li">app</span><span class="guion">-</span><span class="qu">liqu</span><span class="i">i</span><span class="d1">d</span><span class="a">a</span><span class="d2">r</span>
+  </span>
+  <nav>
+    {% block nav %}{% endblock %}
+  </nav>
+</header>
+<main>
+  {% with mensajes = get_flashed_messages() %}
+    {% if mensajes %}
+      <ul class="flashes">
+        {% for m in mensajes %}<li>{{ m }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+  {% block contenido %}{% endblock %}
+</main>
+<footer>app-liquidar</footer>
+</body>
+</html>

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block titulo %}F.931 {{ periodo }} · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>F.931 {{ periodo }} — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Cargá los conceptos del mes de cada empleado. Los remunerativos forman la base de aportes y contribuciones; los no remunerativos solo suman al total. Se guardan, así el mes que viene ya aparece completado.</p>
+
+<form method="POST">
+  <div class="tarjeta" style="margin-bottom:20px;">
+    <h2>Base imponible mínima y máxima (ANSES) del período</h2>
+    {% if not base_exacta %}<div class="tarjeta banner" style="border-color:var(--rojo);margin-bottom:10px;"><p style="color:var(--rojo);margin:0;">⚠ No tengo el valor de {{ periodo }}; te muestro el último conocido. Cargá los del período (Resolución ANSES del mes).</p></div>{% endif %}
+    <div class="fila-form" style="margin-bottom:0;">
+      <div><label>Mínima ($)</label><input type="number" step="0.01" min="0" name="base_min" value="{{ '%.2f'|format(base_min) }}"></div>
+      <div><label>Máxima ($)</label><input type="number" step="0.01" min="0" name="base_max" value="{{ '%.2f'|format(base_max) }}"></div>
+    </div>
+  </div>
+
+  {% for f in filas %}
+  {% set e = f.empleado %}{% set v = f.v %}{% set p = "e" ~ e.id ~ "_" %}
+  <div class="tarjeta" style="margin-bottom:16px;">
+    <h2>{{ e.apellido_nombre }} <span style="color:var(--texto-tenue);font-weight:400;font-size:14px;">— {{ e.cuil }} · {{ tipos[e.tipo] }}</span></h2>
+    {% if f.copiada %}<p class="subtitulo" style="margin:0 0 8px;">Valores copiados del mes anterior (sin horas extras, vacaciones, premios ni SAC). Revisalos.</p>{% endif %}
+    <div class="fila-form" style="margin-bottom:8px;">
+      <div><label>Sueldo básico</label><input type="number" step="0.01" min="0" name="{{ p }}sueldo" value="{{ v.sueldo }}"></div>
+      <div><label>Adicionales (antigüedad, etc.)</label><input type="number" step="0.01" min="0" name="{{ p }}adicionales" value="{{ v.adicionales }}"></div>
+      <div><label>Horas extras ($)</label><input type="number" step="0.01" min="0" name="{{ p }}horas_extras" value="{{ v.horas_extras }}"></div>
+      <div><label>Cant. horas extras</label><input type="number" min="0" name="{{ p }}cant_horas_extras" value="{{ v.cant_horas_extras }}"></div>
+    </div>
+    <div class="fila-form" style="margin-bottom:8px;">
+      <div><label>Zona desfavorable</label><input type="number" step="0.01" min="0" name="{{ p }}zona" value="{{ v.zona }}"></div>
+      <div><label>Vacaciones</label><input type="number" step="0.01" min="0" name="{{ p }}vacaciones" value="{{ v.vacaciones }}"></div>
+      <div><label>Premios / bonos</label><input type="number" step="0.01" min="0" name="{{ p }}premios" value="{{ v.premios }}"></div>
+      <div><label>SAC (aguinaldo)</label><input type="number" step="0.01" min="0" name="{{ p }}sac" value="{{ v.sac }}"></div>
+    </div>
+    <p class="subtitulo" style="margin:0 0 6px;font-size:12.5px;">Sueldo, adicionales, horas extras, zona, vacaciones, premios y SAC son remunerativos (pagan aportes y contribuciones). «No remunerativo» solo suma al total. Los días se usan para proporcionar la base mínima y la detracción.</p>
+    <div class="fila-form" style="margin-bottom:0;">
+      <div><label>No remunerativo</label><input type="number" step="0.01" min="0" name="{{ p }}no_remunerativo" value="{{ v.no_remunerativo }}"></div>
+      <div><label>Días trabajados (0 a 30)</label><input type="number" min="0" max="30" name="{{ p }}dias" value="{{ v.dias }}"></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="tarjeta"><p>No hay empleados activos. <a href="{{ url_for('f931.empleado_nuevo', cliente_id=cliente.id) }}">Agregá uno</a>.</p></div>
+  {% endfor %}
+
+  {% if filas %}
+  <div style="margin:18px 0;">
+    <button type="submit">Guardar remuneraciones</button>
+    <a class="boton secundario" href="{{ url_for('f931.inicio', cliente_id=cliente.id) }}">Volver</a>
+  </div>
+  {% endif %}
+</form>
+
+{% if filas %}
+<div class="tarjeta">
+  <h2>Descargas</h2>
+  {% if listo %}
+  <a class="boton" href="{{ url_for('f931.descargar_pdf', cliente_id=cliente.id, periodo=periodo) }}">Descargar PDF de presentación</a>
+  <a class="boton secundario" href="{{ url_for('f931.descargar_txt', cliente_id=cliente.id, periodo=periodo) }}">Descargar TXT para SICOSS</a>
+  <p class="subtitulo" style="margin:12px 0 0;">Si cambiás algo arriba, guardá antes de descargar. El PDF es un papel de trabajo con el cálculo estimado; el TXT se importa en SICOSS / Declaración en línea, que es donde se presenta la declaración jurada.</p>
+  {% else %}
+  <p class="subtitulo" style="margin:0;">Guardá las remuneraciones de todos los empleados para habilitar las descargas.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

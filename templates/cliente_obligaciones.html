@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Obligaciones del cliente · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Obligaciones — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">
+  Elegí qué trabajás para este cliente. En su solapa de vencimientos solo
+  van a aparecer los de las obligaciones que tildes.
+</p>
+<div class="tarjeta">
+  <form method="POST" action="{{ url_for('clientes.obligaciones_cliente', cliente_id=cliente.id) }}">
+    {% with tipo_actual=cliente.tipo_persona, tildadas=cliente.claves_obligaciones %}
+      {% include "_obligaciones_campos.html" %}
+    {% endwith %}
+    <button type="submit">Guardar</button>
+    <a class="boton secundario" href="{{ url_for('clientes.listar') }}">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

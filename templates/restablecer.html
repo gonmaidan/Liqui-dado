@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block titulo %}Elegir nueva contraseña · app-liquidar{% endblock %}
+{% block contenido %}
+<div style="max-width:380px;margin:60px auto 0;">
+  <div class="tarjeta">
+    <h1>Elegí tu nueva contraseña</h1>
+    <p class="subtitulo">Al menos 8 caracteres.</p>
+    <form method="POST">
+      <label for="password">Contraseña nueva</label>
+      <input type="password" id="password" name="password" minlength="8" required autofocus>
+      <label for="password2">Repetila</label>
+      <input type="password" id="password2" name="password2" minlength="8" required>
+      <button type="submit" style="width:100%">Guardar</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

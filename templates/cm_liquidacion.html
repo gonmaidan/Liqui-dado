@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block titulo %}CM03 {{ periodo }} · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+{% macro mon(v) %}{{ "{:,.2f}".format(v).replace(",", "X").replace(".", ",").replace("X", ".") }}{% endmacro %}
+<h1>CM03 {{ periodo }} — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Coeficientes unificados vigentes desde {{ resultado.vigencia_coef }}. Revisá los ingresos y las deducciones, guardá, y abajo se actualiza el resultado.</p>
+
+<form method="POST">
+  <div class="tarjeta" style="margin-bottom:20px;">
+    <h2>Ingresos computables del mes, por actividad</h2>
+    <p class="subtitulo" style="margin-top:0;">Facturas de venta cargadas en la app para {{ periodo }}: <strong>${{ mon(ctx.ventas) }}</strong> de neto gravado ({{ ctx.n_ventas }} comprobante(s){% if ctx.n_nc %}, {{ ctx.n_nc }} nota(s) de crédito restada(s){% endif %}).
+      {% if not ctx.ingresos_guardados %}Se propusieron en la primera actividad; repartilos si hay más de una.{% endif %}</p>
+    {% if diferencia_ventas != 0 %}<div class="tarjeta banner" style="border-color:var(--rojo);margin-bottom:10px;"><p style="color:var(--rojo);margin:0;">⚠ Lo asignado a las actividades difiere de las ventas cargadas en ${{ mon(diferencia_ventas|abs) }}. Es normal si sumás ingresos exentos o al 0% (también computables) o restás exportaciones; si no, revisalo.</p></div>{% endif %}
+    <div class="fila-form" style="margin-bottom:0;">
+      {% for a in ctx.actividades %}
+      <div><label>{{ a.nombre }}</label><input type="number" step="0.01" name="ing_{{ a.id }}" value="{{ '%.2f'|format(ctx.ingresos[a.id]) }}"></div>
+      {% endfor %}
+    </div>
+    <p class="subtitulo" style="margin:10px 0 0;">Son computables los ingresos gravados, exentos y al 0%; no lo son las exportaciones (en su mayoría), la venta de bienes de uso, reintegros de capital ni lo que va por regímenes especiales. Ajustalos acá si hace falta.</p>
+  </div>
+
+  <div class="tarjeta" style="margin-bottom:20px;">
+    <h2>Deducciones por jurisdicción</h2>
+    {% if ctx.percep_sin_identificar %}<div class="tarjeta banner" style="border-color:var(--rojo);margin-bottom:10px;"><p style="color:var(--rojo);margin:0;">⚠ Hay ${{ mon(ctx.percep_sin_identificar) }} de percepciones de IIBB en compras cuya jurisdicción no pude identificar; cargalas a mano donde correspondan.</p></div>{% endif %}
+    {% for j, v in ctx.percep_ajenas.items() %}<div class="tarjeta banner" style="border-color:var(--rojo);margin-bottom:10px;"><p style="color:var(--rojo);margin:0;">⚠ Hay ${{ mon(v) }} de percepciones de {{ j }} en compras, pero {{ j }} no está entre las jurisdicciones del cliente en Convenio (si tributa directo allá, no va en el CM03).</p></div>{% endfor %}
+    <div class="tabla-scroll"><table>
+      <thead><tr><th>Jurisdicción</th><th>Retenciones</th><th>SIRCREB (bancarias)</th><th>Percepciones</th><th>Pagos a cuenta</th><th>Saldo a favor anterior</th></tr></thead>
+      <tbody>
+      {% for j in ctx.habilitadas %}
+        <tr>
+          <td>{{ j }}</td>
+          {% for k in ["retenciones","sircreb","percepciones","pagos","saldo_anterior"] %}
+          <td><input type="number" step="0.01" min="0" name="cred_{{ j }}_{{ k }}" value="{{ '%.2f'|format(ctx.creditos[j][k]) }}" style="width:130px;">
+            {% if k == "percepciones" and ctx.percep.get(j) and (ctx.percep[j] - ctx.creditos[j][k])|abs > 0.005 %}<div style="font-size:11.5px;color:var(--texto-tenue)">compras: ${{ mon(ctx.percep[j]) }}</div>{% endif %}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    <p class="subtitulo" style="margin:10px 0 0;">Las percepciones se proponen desde las facturas de compra del período (por jurisdicción). <a href="{{ url_for('cm.descargar_percepciones_txt', cliente_id=cliente.id, periodo=periodo) }}">Descargar TXT para importar en SIFERE</a> · <a href="{{ url_for('cm.descargar_percepciones', cliente_id=cliente.id, periodo=periodo) }}">detalle en Excel</a>. Retenciones, SIRCREB, pagos y saldos a favor los cargás vos (los ves en SIFERE web → consulta de retenciones/percepciones).</p>
+  </div>
+
+  <button type="submit">Guardar y calcular</button>
+  <a class="boton secundario" href="{{ url_for('cm.inicio', cliente_id=cliente.id) }}">Volver</a>
+</form>
+
+<div class="tarjeta" style="margin-top:24px;">
+  <h2>Resultado</h2>
+  {% for a in resultado.avisos %}<p style="color:var(--rojo);">⚠ {{ a }}</p>{% endfor %}
+  <div class="tabla-scroll"><table>
+    <thead><tr><th>Jurisdicción</th><th>Coef.</th><th>Base</th><th>Impuesto</th><th>Mínimo</th><th>Determinado</th><th>Deducciones</th><th>Saldo</th></tr></thead>
+    <tbody>
+    {% for f in resultado.filas %}
+      <tr>
+        <td>{{ f.jurisdiccion }}{% for a in f.avisos %}<div style="font-size:11.5px;color:var(--rojo)">⚠ {{ a }}</div>{% endfor %}</td>
+        <td class="num">{{ "%.4f"|format(f.coeficiente) }}</td>
+        <td class="num">{{ mon(f.base) }}</td><td class="num">{{ mon(f.impuesto) }}</td>
+        <td class="num">{{ mon(f.minimo) if f.minimo else "—" }}</td><td class="num">{{ mon(f.impuesto_determinado) }}</td>
+        <td class="num">{{ mon(f.deducciones) }}</td>
+        <td class="num"><strong>{{ mon(f.saldo) if f.saldo >= 0 else "(" ~ mon(-f.saldo) ~ ") a favor" }}</strong></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <p style="margin:14px 0 4px;"><strong>Total a pagar: ${{ mon(resultado.totales.a_pagar) }}</strong>{% if resultado.totales.a_favor %} · saldos a favor que quedan: ${{ mon(resultado.totales.a_favor) }}{% endif %}</p>
+  <p class="subtitulo" style="margin:0 0 12px;">Cada saldo a favor queda en su jurisdicción (no se compensa con otra). La presentación se hace en SIFERE web.</p>
+  <a class="boton" href="{{ url_for('cm.descargar_pdf', cliente_id=cliente.id, periodo=periodo) }}">Descargar PDF</a>
+  <a class="boton secundario" href="{{ url_for('cm.descargar_xlsx', cliente_id=cliente.id, periodo=periodo) }}">Descargar Excel</a>
+</div>
+{% endblock %}

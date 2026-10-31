@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titulo %}Escanear factura · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Escanear factura — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">
+  Elegí la alícuota de IVA de las facturas que vas a escanear ahora (si
+  son todas al mismo %, no hace falta volver a elegirla en cada una) y
+  subí las fotos o PDF (una o varias), con el código QR de AFIP bien visible. Vamos a leer
+  del QR la fecha, el CUIT, el tipo/número de comprobante y el importe
+  total — el neto gravado y el IVA se calculan solos a partir de eso.
+</p>
+
+<div class="tarjeta">
+  <form method="POST" action="{{ url_for('escaner.escanear', cliente_id=cliente.id) }}" enctype="multipart/form-data">
+    <label>¿Es una factura de venta o de compra de este cliente?</label>
+    <select name="tipo" required>
+      <option value="" disabled {{ "selected" if not tipo_sugerido else "" }}>Elegí…</option>
+      <option value="venta" {{ "selected" if tipo_sugerido == "venta" else "" }}>Venta (este cliente la emitió)</option>
+      <option value="compra" {{ "selected" if tipo_sugerido == "compra" else "" }}>Compra (este cliente la recibió de un proveedor)</option>
+    </select>
+
+    <label for="alicuota">Alícuota de IVA de estas facturas</label>
+    <select id="alicuota" name="alicuota" required>
+      {% for a in alicuotas %}
+      <option value="{{ a }}" {{ "selected" if (a|string) == alicuota_sugerida else "" }}>{{ "%.1f"|format(a) }}%</option>
+      {% endfor %}
+    </select>
+
+    <label for="archivos">Fotos o PDF de las facturas (podés elegir varias a la vez, hasta {{ max_archivos }})</label>
+    <input type="file" id="archivos" name="archivos" accept=".jpg,.jpeg,.png,.pdf" multiple required>
+
+    <button type="submit">Leer QR</button>
+  </form>
+</div>
+
+<p class="subtitulo" style="margin-top:20px;">
+  Si esta factura puntual tiene percepciones de IVA o de IIBB, las vas a
+  poder agregar en la pantalla siguiente — se restan del importe total
+  antes de calcular el neto y el IVA, así que no hace falta que hagas esa
+  cuenta a mano.
+</p>
+{% endblock %}

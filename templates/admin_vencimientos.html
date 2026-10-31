@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block titulo %}Calendario de vencimientos · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('admin.panel') }}">Estudios</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.admin_logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Calendario de vencimientos</h1>
+<p class="subtitulo">
+  Calendario base, común a todos los estudios. Cada estudio puede cambiar
+  una fecha por su cuenta sin tocar este calendario.
+</p>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <h2>Cargar vencimientos</h2>
+  <p class="subtitulo" style="margin-top:0;">
+    Una línea por vencimiento: <span class="num">impuesto ; fecha ; terminaciones del CUIT</span>.
+    La fecha puede ser <span class="num">2026-11-18</span> o <span class="num">18/11/2026</span>.
+    Terminaciones separadas por coma (<span class="num">0,1</span>) o <span class="num">todas</span>.
+  </p>
+  <form method="POST" action="{{ url_for('admin.importar_vencimientos') }}">
+    <textarea name="texto" rows="8" style="width:100%;font-family:monospace;" required
+      placeholder="IVA - DDJJ y pago ; 18/11/2026 ; 0,1&#10;IVA - DDJJ y pago ; 19/11/2026 ; 2,3&#10;IVA - DDJJ y pago ; 20/11/2026 ; 4,5"></textarea>
+    <div style="margin-top:8px;"><button type="submit">Cargar</button></div>
+  </form>
+</div>
+
+<div class="tarjeta">
+  <h2>Cargados ({{ filas|length }})</h2>
+  {% if sin_clasificar %}
+  <p style="color:var(--ambar)">{{ sin_clasificar }} vencimiento(s) sin clasificar: no se muestran a ningún cliente hasta que les asignes una obligación.</p>
+  {% endif %}
+  <div class="tabla-scroll">
+  <table>
+    <thead><tr><th>Fecha</th><th>Impuesto</th><th>Terminación CUIT</th><th>Obligación</th><th></th></tr></thead>
+    <tbody>
+      {% for v in filas %}
+      <tr>
+        <td class="num">{{ v.fecha.strftime("%d/%m/%Y") }}</td>
+        <td>{{ v.impuesto }}</td>
+        <td class="num">{{ v.terminaciones_texto }}</td>
+        <td>
+          <form method="POST" action="{{ url_for('admin.asignar_obligacion', vencimiento_id=v.id) }}" style="display:flex;gap:6px;">
+            <select name="obligacion" onchange="this.form.submit()" style="max-width:230px;">
+              <option value="" {{ "selected" if not v.obligacion else "" }}>— Sin clasificar —</option>
+              {% for clave, nombre, _ in obligaciones %}
+              <option value="{{ clave }}" {{ "selected" if v.obligacion == clave else "" }}>{{ nombre }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('admin.eliminar_vencimiento', vencimiento_id=v.id) }}"
+                onsubmit="return confirm('¿Eliminar este vencimiento? También se pierden los cambios de fecha que hayan hecho los estudios sobre él.');">
+            <button type="submit" class="chico peligro">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:var(--texto-tenue)">Todavía no cargaste ningún vencimiento.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

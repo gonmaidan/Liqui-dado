@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block titulo %}Empleado · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>{{ "Nuevo empleado" if nuevo else "Editar empleado" }} — {{ cliente.razon_social }}</h1>
+<form method="POST" class="tarjeta">
+  <div class="fila-form">
+    <div><label>CUIL</label><input type="text" name="cuil" value="{{ e.get('cuil','') }}" placeholder="20-12345678-6" required></div>
+    <div style="flex:2;"><label>Apellido y nombre</label><input type="text" name="apellido_nombre" value="{{ e.get('apellido_nombre','') }}" maxlength="60" required></div>
+  </div>
+  {% macro ayuda(t) %}<p class="subtitulo" style="margin:4px 0 0;font-size:12.5px;">{{ t }}</p>{% endmacro %}
+  {% set cond_v = e.get('condicion', '')|string %}
+  {% set mod_v = e.get('modalidad', '')|string %}
+  {% set os_v = e.get('obra_social', '')|string %}
+  {% set os_otra = (os_v == 'otra') or (os_v and os_v not in codigos_obras and os_v != '') %}
+
+  <div class="fila-form">
+    <div>
+      <label>Tipo de empleado</label>
+      <select name="tipo" id="tipo">
+        {% for t in empleador.tipos %}<option value="{{ t }}" {{ "selected" if e.get('tipo','comun') == t }}>{{ tipos[t] }}</option>{% endfor %}
+      </select>
+      {{ ayuda("De acá depende el cálculo: el jubilado no aporta a jubilación ni obra social; el de jornada parcial no tiene base mínima.") }}
+    </div>
+    <div>
+      <label>Situación de revista</label>
+      <select name="situacion">
+        {% for k, v in situaciones.items() %}<option value="{{ k }}" {{ "selected" if (e.get('situacion', 1)|int) == k }}>{{ k }} — {{ v }}</option>{% endfor %}
+      </select>
+      {{ ayuda("Lo normal es 1 (Activo). Solo se informa; no cambia el cálculo.") }}
+    </div>
+  </div>
+
+  <div class="fila-form">
+    <div>
+      <label>Condición</label>
+      <select name="condicion" id="condicion" class="con-otro">
+        {% for k, v in condiciones.items() %}<option value="{{ k }}" {{ "selected" if cond_v == k|string }}>{{ k }} — {{ v }}</option>{% endfor %}
+        <option value="otro" {{ "selected" if cond_v == 'otro' or (cond_v and cond_v not in condiciones|map('string')|list and cond_v != '') }}>Otro código…</option>
+      </select>
+      <input type="number" min="1" name="condicion_otro" class="otro-campo" placeholder="Escribí el código" value="{{ e.get('condicion_otro', cond_v if cond_v not in condiciones|map('string')|list and cond_v != 'otro' else '') }}" style="display:none;margin-top:6px;">
+      {{ ayuda("Código de Condición de SICOSS. Solo se informa en el TXT; el cálculo usa el tipo de empleado.") }}
+    </div>
+    <div>
+      <label>Modalidad de contratación</label>
+      <select name="modalidad" id="modalidad" class="con-otro">
+        {% for k, v in modalidades.items() %}<option value="{{ k }}" {{ "selected" if mod_v == k|string }}>{{ k }} — {{ v }}</option>{% endfor %}
+        <option value="otro" {{ "selected" if mod_v == 'otro' or (mod_v and mod_v not in modalidades|map('string')|list and mod_v != '') }}>Otro código…</option>
+      </select>
+      <input type="number" min="0" name="modalidad_otro" class="otro-campo" placeholder="Escribí el código" value="{{ e.get('modalidad_otro', mod_v if mod_v not in modalidades|map('string')|list and mod_v != 'otro' else '') }}" style="display:none;margin-top:6px;">
+      {{ ayuda("Tabla de ARCA (lista parcial). Lo más común: 8 (tiempo completo indeterminado). Para otro código, elegí «Otro código…».") }}
+    </div>
+  </div>
+
+  <div class="fila-form" id="bloque-os">
+    <div>
+      <label>Obra social</label>
+      <select name="obra_social" id="obra_social">
+        <option value="">— Elegir —</option>
+        {% for o in obras %}<option value="{{ o.codigo }}" {{ "selected" if os_v == o.codigo }}>{{ o.nombre }} ({{ o.codigo }})</option>{% endfor %}
+        <option value="otra" {{ "selected" if os_otra }}>Otra obra social (cargar código y nombre)…</option>
+      </select>
+      {{ ayuda("Las obras sociales que cargues quedan guardadas en este desplegable para tus próximos empleados y clientes. El código de 6 dígitos lo ves en SICOSS (tabla de obras sociales) o en el recibo/CUIL del empleado.") }}
+      <div id="os-nueva" style="display:none;margin-top:8px;">
+        <input type="text" name="obra_social_codigo" maxlength="6" pattern="\d{6}" placeholder="Código de 6 dígitos" value="{{ e.get('obra_social_codigo', os_v if os_otra and os_v != 'otra' else '') }}">
+        <input type="text" name="obra_social_nombre" maxlength="80" placeholder="Nombre (ej. OSDE)" value="{{ e.get('obra_social_nombre', '') }}" style="margin-top:6px;">
+      </div>
+    </div>
+    <div><label>Adherentes a la obra social</label><input type="number" name="adherentes" value="{{ e.get('adherentes', 0) or 0 }}" min="0">
+      {{ ayuda("Familiares extra que aportan adicional (no cuentan cónyuge e hijos).") }}</div>
+    <div><label>Hijos</label><input type="number" name="hijos" value="{{ e.get('hijos', 0) or 0 }}" min="0">
+      {{ ayuda("Cantidad de hijos a cargo.") }}</div>
+    <div style="flex:0 0 auto;"><label style="display:flex;gap:6px;align-items:center;font-weight:400;"><input type="checkbox" name="conyuge" value="1" style="width:auto;margin:0;" {{ "checked" if e.get('conyuge') }}> Tiene cónyuge</label></div>
+  </div>
+  {% if not nuevo %}
+  <label style="display:flex;gap:6px;align-items:center;font-weight:400;"><input type="checkbox" name="activo" value="1" style="width:auto;margin:0;" {{ "checked" if e.get('activo') }}> Activo (si se va, destildalo y deja de aparecer en las liquidaciones)</label>
+  {% endif %}
+  <p class="subtitulo">Los códigos de condición, modalidad y obra social se informan en el TXT para SICOSS; la descripción es solo una ayuda y no cambia el cálculo. Para jubilados la obra social no se informa.</p>
+  <button type="submit">Guardar</button>
+  <a class="boton secundario" href="{{ url_for('f931.inicio', cliente_id=cliente.id) }}">Cancelar</a>
+</form>
+<script>
+  (function () {
+    var defectos = {{ defectos|tojson }};
+    var tipo = document.getElementById('tipo'), cond = document.getElementById('condicion'), mod = document.getElementById('modalidad');
+    var os = document.getElementById('obra_social'), osNueva = document.getElementById('os-nueva'), bloqueOs = document.getElementById('bloque-os');
+    var nuevo = {{ 'true' if nuevo else 'false' }};
+    var tocados = {};
+    function mostrarOtro(sel) { var c = sel.parentNode.querySelector('.otro-campo'); c.style.display = sel.value === 'otro' ? '' : 'none'; }
+    function elegir(sel, valor) {
+      var hay = Array.prototype.some.call(sel.options, function (o) { return o.value === String(valor); });
+      sel.value = hay ? String(valor) : 'otro';
+      if (!hay) sel.parentNode.querySelector('.otro-campo').value = valor;
+      mostrarOtro(sel);
+    }
+    function poner() {
+      var d = defectos[tipo.value]; if (!d) return;
+      if (!tocados.condicion && (nuevo || !cond.value)) elegir(cond, d.condicion);
+      if (!tocados.modalidad && (nuevo || !mod.value)) elegir(mod, d.modalidad);
+      mostrarOtro(cond); mostrarOtro(mod);
+      var esJub = tipo.value === 'jubilado';
+      os.disabled = esJub; if (esJub) { os.value = ''; }
+      osNueva.style.display = (!esJub && os.value === 'otra') ? '' : 'none';
+    }
+    cond.addEventListener('change', function () { tocados.condicion = 1; mostrarOtro(cond); });
+    mod.addEventListener('change', function () { tocados.modalidad = 1; mostrarOtro(mod); });
+    os.addEventListener('change', function () { osNueva.style.display = os.value === 'otra' ? '' : 'none'; });
+    tipo.addEventListener('change', poner);
+    if (!nuevo) { tocados.condicion = tocados.modalidad = 1; }
+    mostrarOtro(cond); mostrarOtro(mod); poner();
+  })();
+</script>
+{% endblock %}
