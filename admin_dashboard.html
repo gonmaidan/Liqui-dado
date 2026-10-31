@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block titulo %}Panel admin · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('admin.vencimientos') }}">Vencimientos</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.admin_logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Estudios</h1>
+<p class="subtitulo">
+  Gestión de cuentas. Por diseño, este panel no muestra CUIT, razón social
+  ni ningún dato de los clientes de cada estudio — solo cuántos tienen
+  cargados.
+</p>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <h2>Dar de alta un estudio</h2>
+  <form method="POST" action="{{ url_for('admin.crear_estudio') }}">
+    <div class="fila-form">
+      <div>
+        <label for="nombre">Nombre del estudio</label>
+        <input type="text" id="nombre" name="nombre" required>
+      </div>
+      <div>
+        <label for="email">Email de acceso</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      <div style="flex:0;">
+        <button type="submit">Crear</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div class="tarjeta">
+  <h2>Estudios dados de alta</h2>
+  <div class="tabla-scroll">
+  <table>
+    <thead>
+      <tr><th>Estudio</th><th>Email</th><th>Clientes</th><th>Estado</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for estudio, cantidad_clientes in filas %}
+      <tr>
+        <td>{{ estudio.nombre }}</td>
+        <td class="num">{{ estudio.email }}</td>
+        <td class="num">{{ cantidad_clientes }}</td>
+        <td>
+          {% if estudio.activo %}
+            <span class="pill activo">Activo</span>
+          {% else %}
+            <span class="pill suspendido">Suspendido</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('admin.alternar_estudio', estudio_id=estudio.id) }}">
+            <button type="submit" class="chico secundario">
+              {{ "Suspender" if estudio.activo else "Reactivar" }}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="color:var(--texto-tenue)">Todavía no hay estudios dados de alta.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endblock %}

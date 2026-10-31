@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Mi cuenta · app-liquidar{% endblock %}
+{% block nav %}
+  {% if current_user.__class__.__name__ == "Estudio" %}
+    <a href="{{ url_for('index') }}">Liquidar</a>
+    <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+    <a href="{{ url_for('auth.logout') }}">Salir</a>
+  {% else %}
+    <a href="{{ url_for('admin.panel') }}">Panel</a>
+    <a href="{{ url_for('auth.admin_logout') }}">Salir</a>
+  {% endif %}
+{% endblock %}
+{% block contenido %}
+<h1>Mi cuenta</h1>
+<p class="subtitulo">Cambiar la contraseña de tu cuenta.</p>
+<div class="tarjeta" style="max-width:380px;">
+  <form method="POST">
+    <label for="actual">Contraseña actual</label>
+    <input type="password" id="actual" name="actual" required autofocus>
+    <label for="nueva">Contraseña nueva</label>
+    <input type="password" id="nueva" name="nueva" minlength="8" required>
+    <label for="nueva2">Repetí la contraseña nueva</label>
+    <input type="password" id="nueva2" name="nueva2" minlength="8" required>
+    <button type="submit">Guardar cambios</button>
+  </form>
+</div>
+{% endblock %}

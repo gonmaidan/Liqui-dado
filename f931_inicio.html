@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titulo %}F.931 · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>F.931 — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Cargás los empleados una sola vez; cada mes completás las remuneraciones y descargás el PDF de presentación y el TXT para importar en SICOSS.</p>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <h2>1. Datos del empleador</h2>
+  <p>{{ tipos_empleador[empleador.tipo_empleador] }}<br>
+     Tipos de empleado habilitados:
+     {% for t in empleador.tipos %}{{ tipos[t] }}{{ ", " if not loop.last else "" }}{% endfor %}</p>
+  <a class="boton secundario chico" href="{{ url_for('f931.config_empleador', cliente_id=cliente.id) }}">Editar datos del empleador</a>
+  <a class="boton secundario chico" href="{{ url_for('f931.parametros') }}">Alícuotas y topes</a>
+</div>
+
+<div class="tarjeta" style="margin-bottom:24px;">
+  <h2>2. Empleados</h2>
+  {% if empleados %}
+  <div class="tabla-scroll"><table>
+    <thead><tr><th>CUIL</th><th>Apellido y nombre</th><th>Tipo</th><th>Obra social</th><th></th></tr></thead>
+    <tbody>
+    {% for e in empleados %}
+      <tr>
+        <td class="num">{{ e.cuil }}</td>
+        <td>{{ e.apellido_nombre }}{% if not e.activo %} <span class="pill suspendido">Inactivo</span>{% endif %}</td>
+        <td>{{ tipos[e.tipo] }}</td>
+        <td class="num">{{ e.obra_social or "—" }}</td>
+        <td style="text-align:right;">
+          <a class="boton secundario chico" href="{{ url_for('f931.empleado_editar', cliente_id=cliente.id, empleado_id=e.id) }}">Editar</a>
+          <form method="POST" action="{{ url_for('f931.empleado_eliminar', cliente_id=cliente.id, empleado_id=e.id) }}" style="display:inline;"
+                onsubmit="return confirm('¿Eliminar a este empleado y sus remuneraciones cargadas?');">
+            <button type="submit" class="chico peligro">Eliminar</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  <p style="color:var(--texto-tenue)">Todavía no cargaste empleados.</p>
+  {% endif %}
+  <a class="boton chico" href="{{ url_for('f931.empleado_nuevo', cliente_id=cliente.id) }}">+ Agregar empleado</a>
+</div>
+
+<div class="tarjeta">
+  <h2>3. Liquidar un período</h2>
+  <form method="POST" action="{{ url_for('f931.ir_a_periodo', cliente_id=cliente.id) }}" class="fila-form" style="margin-bottom:0;">
+    <div style="max-width:240px;">
+      <label for="periodo">Período (AAAA-MM)</label>
+      <input type="text" id="periodo" name="periodo" value="{{ periodo_sugerido }}" pattern="\d{4}-\d{2}" required>
+    </div>
+    <div style="flex:0;"><button type="submit" {{ "disabled" if not empleados }}>Cargar remuneraciones</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Ingresar · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('auth.admin_login') }}">Soy administrador</a>
+{% endblock %}
+{% block contenido %}
+<div style="max-width:380px;margin:60px auto 0;">
+  <div class="tarjeta">
+    <h1>Ingresar</h1>
+    <p class="subtitulo">Accedé con la cuenta de tu estudio.</p>
+    <form method="POST">
+      <label for="email">Email</label>
+      <input type="email" id="email" name="email" required autofocus>
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" required>
+      <button type="submit" style="width:100%">Ingresar</button>
+    </form>
+    <p style="text-align:center;margin-top:16px;">
+      <a href="{{ url_for('auth.recuperar') }}" style="color:var(--texto-suave);font-size:13px;">¿Olvidaste tu contraseña?</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

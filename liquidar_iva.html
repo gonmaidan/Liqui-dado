@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block titulo %}Liquidar IVA · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Liquidación de IVA — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Paso 3 de 3 — Elegí el período y, si querés, subí sus comprobantes de ventas y compras.</p>
+
+<div class="tarjeta">
+  <form method="POST" action="{{ url_for('generar') }}" enctype="multipart/form-data">
+    <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+
+    <label for="periodo">Período (AAAA-MM)</label>
+    <input type="text" id="periodo" name="periodo" placeholder="2026-08" pattern="\d{4}-\d{2}" required>
+
+    <label for="ventas">Comprobantes de ventas (CSV o Excel) — opcional si ya escaneaste facturas</label>
+    <input type="file" id="ventas" name="ventas" accept=".csv,.xlsx,.xls">
+
+    <label for="compras">Comprobantes de compras (CSV o Excel) — opcional si ya escaneaste facturas</label>
+    <input type="file" id="compras" name="compras" accept=".csv,.xlsx,.xls">
+
+    <button type="submit">Generar liquidación</button>
+    <a class="boton secundario" href="{{ url_for('elegir_impuesto', cliente_id=cliente.id) }}">← Cambiar impuesto</a>
+  </form>
+  <p class="subtitulo" style="margin:16px 0 0;">
+    ¿Preferís cargar las facturas escaneando su QR en vez de armar un Excel?
+    Usá <a href="{{ url_for('escaner.escanear', cliente_id=cliente.id) }}">Escanear factura</a>
+    para este cliente — podés combinar las dos formas para el mismo período.
+  </p>
+</div>
+{% endblock %}

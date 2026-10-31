@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block titulo %}Convenio Multilateral · app-liquidar{% endblock %}
+{% block nav %}
+  <a href="{{ url_for('index') }}">Liquidar</a>
+  <a href="{{ url_for('clientes.listar') }}">Mis clientes</a>
+  <a href="{{ url_for('auth.cuenta') }}">Mi cuenta</a>
+  <span class="sesion">{{ current_user.nombre }}</span>
+  <a href="{{ url_for('auth.logout') }}">Salir</a>
+{% endblock %}
+{% block contenido %}
+<h1>Convenio Multilateral (CM03) — {{ cliente.razon_social }}</h1>
+<p class="subtitulo">Primero se configura una sola vez (jurisdicciones, actividades con sus alícuotas y coeficientes unificados). Después, cada mes cargás los ingresos y las deducciones y descargás el papel de trabajo.</p>
+
+<div class="tarjeta" style="margin-bottom:20px;">
+  <h2>1. Jurisdicciones, actividades y alícuotas</h2>
+  {% if jurs %}
+    <p>{{ jurs|length }} jurisdicción(es): {% for j in jurs %}{{ j.jurisdiccion }}{{ ", " if not loop.last }}{% endfor %}.<br>
+       {{ actividades|length }} actividad(es){% if actividades %}: {% for a in actividades %}{{ a.nombre }}{{ ", " if not loop.last }}{% endfor %}{% endif %}.</p>
+  {% else %}<p style="color:var(--texto-tenue)">Todavía no configuraste nada.</p>{% endif %}
+  <a class="boton secundario chico" href="{{ url_for('cm.config', cliente_id=cliente.id) }}">Configurar</a>
+</div>
+
+<div class="tarjeta" style="margin-bottom:20px;">
+  <h2>2. Coeficientes unificados</h2>
+  {% if conjuntos %}
+    <p>{% for vig, c in conjuntos %}Desde {{ vig }}: {{ c|length }} jurisdicción(es){{ "; " if not loop.last }}{% endfor %}.</p>
+  {% else %}<p style="color:var(--texto-tenue)">No cargaste coeficientes.</p>{% endif %}
+  <a class="boton secundario chico" href="{{ url_for('cm.coeficientes', cliente_id=cliente.id) }}">{{ "Ver / agregar" if jurs else "Primero configurá las jurisdicciones" }}</a>
+</div>
+
+<div class="tarjeta">
+  <h2>3. Liquidar un período</h2>
+  <form method="POST" action="{{ url_for('cm.ir', cliente_id=cliente.id) }}" class="fila-form" style="margin-bottom:0;">
+    <div style="max-width:240px;">
+      <label for="periodo">Período (AAAA-MM)</label>
+      <input type="text" id="periodo" name="periodo" value="{{ periodo_sugerido }}" pattern="\d{4}-\d{2}" required>
+    </div>
+    <div style="flex:0;"><button type="submit">Abrir</button></div>
+  </form>
+</div>
+{% endblock %}
